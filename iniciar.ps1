@@ -6,4 +6,4 @@ if (-not (Test-Path -LiteralPath $appPython)) {
     Write-Host 'Instale com: .venv\Scripts\python -m pip install -r requirements.txt'
     exit 1
 }
-& $appPython -m streamlit run app.py
+& $appPython -m streamlit run app.py --server.address=127.0.0.1 --server.port=8517

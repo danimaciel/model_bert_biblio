@@ -14,13 +14,13 @@ python -m venv .venv
 
 No Windows, após instalar, também é possível executar `./iniciar.ps1`.
 
-Para habilitar SBERT e BERTopic:
+SBERT e BERTopic já estão incluídos no `requirements.txt`. O arquivo abaixo permanece como alternativa equivalente:
 
 ```powershell
 .venv\Scripts\python -m pip install -r requirements-semantic.txt
 ```
 
-`requirements-lock.txt` registra as versões completas instaladas neste ambiente Windows/Python 3.12; use-o para reproduzir o ambiente verificado.
+`requirements-lock.txt` registra o ambiente original Windows/Python 3.12. Para implantação, use `requirements.txt`, que inclui a restrição `pyarrow<25` exigida pelo ambiente de nuvem observado.
 
 A instalação semântica é maior (inclui PyTorch). O primeiro uso baixa `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` para `.models`. A análise é local no servidor. A opção separada de nomes conceituais usa uma API de LLM somente por ação explícita. Títulos/resumos longos estão sujeitos ao limite de tokens do encoder; esta versão não faz segmentação de textos completos.
 
@@ -62,6 +62,8 @@ Teste semântico de integração com download inicial do modelo e apenas dados f
 .venv\Scripts\python scripts/check_semantic.py
 ```
 
-A aplicação abre em http://127.0.0.1:8517. A configuração atual permite acesso apenas neste computador.
+O iniciador `iniciar.ps1` abre em http://127.0.0.1:8517, com acesso apenas neste computador. A configuração compartilhada não fixa endereço nem porta, permitindo que o Streamlit Cloud use sua porta padrão 8501.
+
+No Streamlit Community Cloud, escolha o repositório `danimaciel/model_bert_biblio`, branch `codex/versao-inicial`, arquivo `app.py` e Python 3.12. As dependências são instaladas via `requirements.txt`.
 
 Documentação: [Streamlit](https://docs.streamlit.io/), [BERTopic](https://maartengr.github.io/BERTopic/), [Sentence Transformers](https://www.sbert.net/).
