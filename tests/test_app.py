@@ -8,6 +8,9 @@ class AppFlowTests(unittest.TestCase):
         app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'app.py'), default_timeout=60).run()
         self.assertEqual(len(app.exception), 0, str(app.exception))
         self.assertEqual(app.metric[0].value, '18')
+        self.assertIn('Leis bibliométricas', [tab.label for tab in app.tabs])
+        self.assertIn('Metodologia e referências', [tab.label for tab in app.tabs])
+        self.assertTrue(any('ocorrências' in item.value for item in app.markdown))
         for mode in ['Descobrir categorias', 'Classificar por categorias', 'Combinar os dois']:
             next(x for x in app.radio if x.label == 'Modo de análise').set_value(mode).run()
             next(x for x in app.button if x.label == 'Analisar categorias').click().run()

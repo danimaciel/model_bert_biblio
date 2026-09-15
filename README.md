@@ -50,7 +50,21 @@ A instalação semântica é maior (inclui PyTorch). O primeiro uso baixa `sente
 
 Arquivos e resultados permanecem na sessão do Streamlit; apenas o modelo é compartilhado em cache. Não há contas, banco de dados ou persistência de projetos nesta versão. Ao publicar para múltiplos usuários, dimensione recursos e adicione autenticação conforme o ambiente.
 
-## Verificar
+## Leis bibliométricas e referências
+
+A aba **Leis bibliométricas** aplica três comparações descritivas à base preparada e filtrada:
+
+- **Zipf:** ocorrências de palavras de títulos e resumos, com repetições e palavras funcionais; curva `f(r)=C/r`, normalizada para o total de ocorrências no vocabulário observado. Não utiliza a frequência documental de palavras-chave.
+- **Lotka:** autores por quantidade de documentos, contagem integral, comparados com `A × 6/(π²x²)`. A parcela teórica acima do máximo observado é informada separadamente.
+- **Bradford:** fontes ordenadas por produção em três zonas contíguas, procurando um terço dos documentos por zona sem dividir fontes. Mostra núcleo, desvios da meta, razões sucessivas e referência `1:b:b²`. Requer três fontes; para interpretação clássica, use periódicos de um assunto coerente.
+
+As comparações não constituem teste de aderência nem comprovação de que a base obedece às leis. Expoentes de Zipf e Lotka são fixos; o multiplicador de Bradford é descritivo. Ausências, critérios para empates e limitações estão documentados na aba **Metodologia e referências**, que também fundamenta estatísticas, TF-IDF, similaridade, LDA e SBERT/BERTopic.
+
+O ZIP inclui `zipf.csv`, `lotka.csv`, `bradford_fontes.csv`, `bradford_zonas.csv` e `metodologia_referencias.md`. O relatório HTML e `metodologia.json` incluem métodos, referências e cobertura dos dados.
+
+Referências centrais: [Zipf (1949)](https://archive.org/details/humanbehaviourpr0000zipf), [Lotka (1926)](https://www.jstor.org/stable/24529203), [Bradford (1934; republicação 1985)](https://doi.org/10.1177/016555158501000407). Sobre validação de leis de potência: [Clauset, Shalizi e Newman (2009)](https://doi.org/10.1137/070710111).
+
+## Verificar a implementação
 
 ```powershell
 .venv\Scripts\python -m unittest discover -s tests -v

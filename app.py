@@ -10,6 +10,8 @@ from bibliometria.data import FIELDS, read_table, guess_mapping, prepare, descri
 from bibliometria.topics import MODEL, CAT_COLUMNS, ASSIGN_COLUMNS, analyze
 from bibliometria.export import export_zip
 from bibliometria.labels import evidence_payload, suggest_labels
+from bibliometria.laws import bibliometric_laws
+from bibliometria.methodology import METHODS, REFERENCES, methodology_markdown
 
 st.set_page_config(page_title='Observatório bibliométrico', page_icon='📚', layout='wide')
 st.markdown('''<style>.block-container{padding-top:4rem;max-width:1400px}h1{letter-spacing:-1.5px}div[data-testid="stMetric"]{background:white;border:1px solid #e0e7ef;padding:18px;border-radius:12px}div[data-testid="stMetricValue"]{color:#087f8c}</style>''', unsafe_allow_html=True)
@@ -103,8 +105,9 @@ metrics[0].metric('Documentos', f'{len(df):,}')
 metrics[1].metric('Autores identificados', df.author_list.explode().dropna().nunique())
 metrics[2].metric('Periódicos / fontes', df.source.replace('', pd.NA).nunique())
 metrics[3].metric('Mediana de citações', f'{df.citations.median():.1f}' if df.citations.notna().any() else 'N/D')
-overview, thematic, documents, downloads = st.tabs(['Panorama bibliométrico', 'Categorias temáticas', 'Documentos e qualidade', 'Exportar análise'])
+overview, laws_tab, thematic, documents, methods_tab, downloads = st.tabs(['Panorama bibliométrico', 'Leis bibliométricas', 'Categorias temáticas', 'Documentos e qualidade', 'Metodologia e referências', 'Exportar análise'])
 figures = {}
+law_tables, law_info = bibliometric_laws(df)
 with overview:
     left, right = st.columns(2)
     annual = df.year.dropna().astype(int).value_counts().sort_index().rename_axis('Ano').reset_index(name='Documentos')
@@ -134,6 +137,64 @@ with overview:
     st.caption('Contagem integral: cada autor recebe um documento por publicação. Nomes são mantidos como informados, sem desambiguação de pessoas. Citações refletem a fonte e a data da exportação; ausências não são zeros.')
     if df.type.ne('').any():
         st.dataframe(df.type[df.type.ne('')].value_counts().rename_axis('Tipo').reset_index(name='Documentos'), hide_index=True)
+
+with laws_tab:
+    st.subheader('Zipf, Lotka e Bradford')
+    st.info(law_info['interpretacao'])
+    st.caption('Os cálculos usam a base após deduplicação e filtros. Fórmulas, critérios e fontes completas estão em Metodologia e referências.')
+    st.markdown('### Zipf · frequência de palavras')
+    st.latex(r'f(r)=C/r,\quad C=T/\sum_{r=1}^{V}(1/r)')
+    st.caption('Título + resumo; ocorrências de palavras com repetições e palavras funcionais. [Zipf, 1949; Ferrer i Cancho e Solé, 2003]')
+    z = law_tables['zipf']
+    zi = law_info['zipf']
+    st.write(f"{zi['ocorrencias']} ocorrências · {zi['vocabulario']} palavras distintas · {zi['documentos_sem_tokens']} documentos sem palavras utilizáveis.")
+    if z.empty:
+        st.warning('Zipf indisponível: não há palavras em títulos e resumos.')
+    else:
+        figures['lei_zipf'] = px.line(z, x='Posição', y=['Ocorrências', 'Zipf esperado (s=1)'], log_x=True, log_y=True,
+                                      title='Zipf: observado e referência clássica', labels={'value': 'Ocorrências', 'variable': 'Série'})
+        st.plotly_chart(figures['lei_zipf'], width='stretch')
+        st.dataframe(z, hide_index=True, width='stretch')
+    st.markdown('### Lotka · produtividade dos autores')
+    st.latex(r'E_x=A\frac{6}{\pi^2x^2},\quad x\geq1')
+    st.caption('Contagem integral de coautores, sem desambiguação; expoente clássico fixo em 2. [Lotka, 1926]')
+    l = law_tables['lotka']
+    li = law_info['lotka']
+    st.write(f"{li['autores']} autores · {li['documentos_sem_autoria']} documentos sem autoria.")
+    if l.empty:
+        st.warning('Lotka indisponível: não há autores identificados.')
+    else:
+        figures['lei_lotka'] = px.line(l, x='Documentos por autor', y=['Autores observados', 'Lotka esperado (a=2)'], markers=True,
+                                       title='Lotka: observado e referência clássica', labels={'value': 'Autores', 'variable': 'Série'})
+        st.plotly_chart(figures['lei_lotka'], width='stretch')
+        st.dataframe(l, hide_index=True, width='stretch')
+        st.caption(f"Autores esperados acima do máximo observado: {li['autores_esperados_acima_maximo_observado']:.2f}. A curva usa suporte infinito; a tabela não é renormalizada.")
+    st.markdown('### Bradford · dispersão entre fontes')
+    st.latex(r'n_1:n_2:n_3\approx1:b:b^2,\quad b=\sqrt{n_3/n_1}')
+    st.caption('Três zonas com meta de um terço dos documentos com fonte. Fontes não são divididas. Para a interpretação clássica, use periódicos de um mesmo assunto. [Bradford, 1934/1985]')
+    bi = law_info['bradford']
+    st.write(f"{bi['fontes']} fontes · {bi['documentos_com_fonte']} documentos com fonte · {bi['documentos_sem_fonte']} sem fonte.")
+    zones = law_tables['bradford_zonas']
+    if zones.empty:
+        st.warning(bi['status'])
+    else:
+        st.write(f"Meta por zona: {bi['meta_documentos_por_zona']:.2f} documentos · multiplicador b: {bi['multiplicador_b']:.3f}")
+        figures['lei_bradford'] = px.bar(zones, x='Zona', y=['Fontes', 'Fontes esperadas (1:b:b²)'], barmode='group',
+                                         title='Bradford: fontes por zona', labels={'value': 'Fontes', 'variable': 'Série'})
+        st.plotly_chart(figures['lei_bradford'], width='stretch')
+        st.dataframe(zones, hide_index=True, width='stretch')
+        st.caption('Zona 1 = núcleo. Compare também os desvios da meta de documentos: zonas desequilibradas limitam a interpretação. b é calculado pelas zonas 1 e 3; sua coincidência com a curva é construída.')
+    st.dataframe(law_tables['bradford_fontes'], hide_index=True, width='stretch')
+
+with methods_tab:
+    st.subheader('Metodologia e referências')
+    st.write('Todos os indicadores usam a base preparada e os filtros ativos. As referências fundamentam os métodos; as escolhas desta implementação estão explicitadas abaixo.')
+    for title, explanation in METHODS:
+        with st.expander(title):
+            st.write(explanation)
+    for key, citation, url in REFERENCES:
+        st.markdown(f'**[{key}]** {citation} [Acessar fonte]({url})')
+    st.download_button('Baixar metodologia e referências (.md)', methodology_markdown(), 'metodologia_referencias.md', 'text/markdown')
 
 with thematic:
     st.subheader('Construa suas categorias de análise')
